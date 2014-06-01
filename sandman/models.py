@@ -86,17 +86,19 @@ class Model(MethodView):
         if resource is None:
             resource = self.__model__(   # pylint: disable=not-callable
                 **request.json)
+            self.__db__.session.add(resource)
+            self.__db__.session.commit()
+            return self._created_response(self.to_dict(resource))
         else:
-            resource.from_dict(request.json)
-        self.__db__.session.add(resource)
-        self.__db__.session.commit()
-        return self._created_response(self.to_dict(resource))
+            resource = self.__model__(**request.json)
+            self.__db__.session.merge(resource)
+            self.__db__.session.commit()
+            return self._no_content_response()
 
     @verify_fields
     def patch(self, resource_id):
         """Return response to HTTP PATCH request."""
-        resource = self._resource(resource_id)
-        resource.from_dict(request.json)
+        resource = self.__model__(**request.json)
         self.__db__.session.add(resource)
         self.__db__.session.commit()
         return self._created_response(self.to_dict(resource))

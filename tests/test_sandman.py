@@ -105,3 +105,34 @@ def test_existing_resource(app):
             data=json.dumps({'ArtistId': 1, 'Name': 'AC/DC'}),
             headers={'Content-type': 'application/json'})
         assert response.status_code == 400
+
+
+def test_delete_resource(app):
+    """Can we successfully DELETE a resource?"""
+    with app.test_client() as test:
+        response = test.delete('/album/1')
+        assert response.status_code == 204
+
+
+def test_put_existing_resource(app):
+    """Can we successfully PUT an existing resource?"""
+    with app.test_client() as test:
+        response = test.put(
+            '/artist/1',
+            data=json.dumps({'ArtistId': 1, 'Name': 'Jeff/DC'}),
+            headers={'Content-type': 'application/json'})
+        assert response.status_code == 204
+        response = test.get('/artist/1')
+        assert json.loads(response.get_data())['Name'] == 'Jeff/DC'
+
+
+def test_put_new_resource(app):
+    """Can we successfully PUT an existing resource?"""
+    with app.test_client() as test:
+        response = test.put(
+            '/artist/276',
+            data=json.dumps({'ArtistId': 276, 'Name': 'Jeff/DC'}),
+            headers={'Content-type': 'application/json'})
+        assert response.status_code == 201
+        response = test.get('/artist/276')
+        assert json.loads(response.get_data())['Name'] == 'Jeff/DC'
