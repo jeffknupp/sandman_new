@@ -5,7 +5,7 @@ import shutil
 
 import pytest
 
-from sandman import app as sandman_app, reflect_all
+from sandman import app as sandman_app, reflect_all, init_app
 from sandman.models import db
 
 DB_LOCATION = os.path.join(os.getcwd(), 'tests', 'chinook.sqlite3')
@@ -35,9 +35,44 @@ def app():
     os.unlink(DB_LOCATION)
 
 
+@pytest.yield_fixture(scope='function')
+def init():
+    """Fixture to provide the application object and initialize the
+    database."""
+    sandman_app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////' + DB_LOCATION
+    shutil.copy(
+        os.path.join(
+            os.getcwd(),
+            'tests',
+            'data',
+            'chinook.sqlite3'),
+        DB_LOCATION)
+    sandman_app.testing = True
+    db.init_app(sandman_app)
+    import models
+
+    try:
+        init_app(sandman_app, [models.Artist])
+    except AssertionError:
+        pass
+
+    yield sandman_app
+
+    os.unlink(DB_LOCATION)
+
+
+
 def test_get_collection(app):
     """Can we get a collection as JSON?"""
     with app.test_client() as test:
+        response = test.get('/artist')
+        json_response = json.loads(response.get_data())
+        assert len(json_response['resources']) == 275
+
+
+def test_get_collection_existing_model(init):
+    """Can we get a collection as JSON?"""
+    with init.test_client() as test:
         response = test.get('/artist')
         json_response = json.loads(response.get_data())
         assert len(json_response['resources']) == 275
@@ -49,6 +84,15 @@ def test_get_resource(app):
         response = test.get('/artist/1')
         json_response = json.loads(response.get_data())
         assert json_response['Name'] == 'AC/DC'
+
+
+def test_get_resource_with_datetime(app):
+    """Can we get a resource with a datetime field as JSON?"""
+    with app.test_client() as test:
+        response = test.get('/datetime/1')
+        json_response = json.loads(response.get_data())
+        assert 'time' in json_response
+
 
 
 def test_get_non_existant_resource(app):
