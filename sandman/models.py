@@ -64,7 +64,7 @@ class Model(MethodView):
     def post(self):
         """Return response to HTTP POST request."""
         # pylint: disable=unused-argument
-        resource = self.__model__.query.filter_by(**request.json).first()
+        resource = self.__db__.session.query(self.__model__).filter_by(**request.json).first()
         # resource already exists; don't create it again
         if resource:
             raise BadRequestException('resource already exists')
