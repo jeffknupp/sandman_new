@@ -136,3 +136,15 @@ def test_put_new_resource(app):
         assert response.status_code == 201
         response = test.get('/artist/276')
         assert json.loads(response.get_data())['Name'] == 'Jeff/DC'
+
+
+def test_patch(app):
+    """Can we successfully patch an existing resource?"""
+    with app.test_client() as test:
+        response = test.patch(
+            '/artist/1',
+            data=json.dumps({'Name': 'Jeff/DC'}),
+            headers={'Content-type': 'application/json'})
+        assert response.status_code == 201
+        response = test.get('/artist/276')
+        assert json.loads(response.get_data())['ArtistId'] == 1
