@@ -20,7 +20,6 @@ def verify_fields(function):
     def decorated(instance, *args, **kwargs):
         """The decorator function."""
         data = request.get_json(force=True, silent=True)
-        print data
         if not data:
             raise BadRequestException("No data received from request")
         for required in instance.__model__.__table__.columns:

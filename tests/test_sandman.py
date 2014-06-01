@@ -23,7 +23,7 @@ def app():
             'data',
             'chinook.sqlite3'),
         DB_LOCATION)
-
+    sandman_app.testing = True
     db.init_app(sandman_app)
     try:
         reflect_all()
@@ -49,3 +49,13 @@ def test_post_resource(app):
             data=json.dumps({'Name': 'Jeff Knupp'}),
             headers={'Content-type': 'application/json'})
         assert response.status_code == 201
+
+def test_post_no_data(app):
+    with app.test_client() as test:
+        response = test.post(
+            '/artist',
+            data=json.dumps({}),
+            headers={'Content-type': 'application/json'})
+        assert response.status_code == 400
+
+

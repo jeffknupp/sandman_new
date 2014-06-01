@@ -26,22 +26,23 @@ def init_app(app, models):
 
     # pylint: disable=unused-variable
 
-    @app.errorhandler(BadRequestException)
-    @app.errorhandler(ForbiddenException)
-    @app.errorhandler(NotAcceptableException)
-    @app.errorhandler(NotFoundException)
-    @app.errorhandler(ConflictException)
-    @app.errorhandler(ServerErrorException)
-    @app.errorhandler(NotImplementedException)
-    @app.errorhandler(ServiceUnavailableException)
-    def handle_application_error(error):
-        """Handler used to send JSON error messages rather than default
-        HTML ones."""
-        response = jsonify(error.to_dict())
-        response.status_code = error.code
-        return response
-
     register(models)
+
+@app.errorhandler(BadRequestException)
+@app.errorhandler(ForbiddenException)
+@app.errorhandler(NotAcceptableException)
+@app.errorhandler(NotFoundException)
+@app.errorhandler(ConflictException)
+@app.errorhandler(ServerErrorException)
+@app.errorhandler(NotImplementedException)
+@app.errorhandler(ServiceUnavailableException)
+def handle_application_error(error):
+    """Handler used to send JSON error messages rather than default
+    HTML ones."""
+    response = jsonify(error.to_dict())
+    response.status_code = error.code
+    return response
+
 
 def add_pk(db, cls):
     """Return a class deriving from our Model class as well as the SQLAlchemy
