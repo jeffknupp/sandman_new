@@ -42,7 +42,34 @@ def test_get_collection(app):
         json_response = json.loads(response.get_data())
         assert len(json_response['resources']) == 275
 
+
+def test_get_resource(app):
+    """Can we get a resource as JSON?"""
+    with app.test_client() as test:
+        response = test.get('/artist/1')
+        json_response = json.loads(response.get_data())
+        assert json_response['Name'] == 'AC/DC'
+
+
+def test_get_non_existant_resource(app):
+    """Can we get a resource as JSON?"""
+    with app.test_client() as test:
+        response = test.get('/artist/300')
+        assert response.status_code == 404
+
+
+def test_get_paginated_collection(app):
+    """Can we get a single page of a collection as JSON?"""
+    with app.test_client() as test:
+        response = test.get('/artist?page=2')
+        json_response = json.loads(response.get_data())
+        assert len(json_response['resources']) == 20
+        assert json_response['resources'][0]['ArtistId'] == 41
+        assert json_response['resources'][19]['ArtistId'] == 60
+
+
 def test_post_resource(app):
+    """Can we POST a resource?"""
     with app.test_client() as test:
         response = test.post(
             '/artist',
@@ -51,6 +78,7 @@ def test_post_resource(app):
         assert response.status_code == 201
 
 def test_post_no_data(app):
+    """Do we get a 400 error if we POST without data?"""
     with app.test_client() as test:
         response = test.post(
             '/artist',
@@ -59,3 +87,21 @@ def test_post_no_data(app):
         assert response.status_code == 400
 
 
+def test_post_wrong_data(app):
+    """Do we get a 400 error if we POST without including required data."""
+    with app.test_client() as test:
+        response = test.post(
+            '/artist',
+            data=json.dumps({'foo': 'bar'}),
+            headers={'Content-type': 'application/json'})
+        assert response.status_code == 403
+
+
+def test_existing_resource(app):
+    """Do we get a 400 error if we POST a resource that already exists?"""
+    with app.test_client() as test:
+        response = test.post(
+            '/artist',
+            data=json.dumps({'ArtistId': 1, 'Name': 'AC/DC'}),
+            headers={'Content-type': 'application/json'})
+        assert response.status_code == 400

@@ -54,8 +54,7 @@ class Model(MethodView):
         if not 'page' in request.args:
             resources = self.__db__.session.query(self.__model__).all()
         else:
-            resources = self.__model__.query.paginate(
-                int(request.args['page'])).items
+            resources = self.__db__.session.query(self.__model__).limit(20).offset(20 * int(request.args['page'])).all()
         return jsonify(
             {'resources': [self.to_dict(resource) for resource in resources]})
 
