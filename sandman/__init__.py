@@ -14,9 +14,10 @@ from sandman.exception import (
     NotImplementedException,
     ServiceUnavailableException)
 from sandman.models import db, Model
+from sandman.admin import admin
 
 app = Flask(__name__)
-
+app.register_blueprint(admin, url_prefix='/admin')
 
 __version__ = '0.0.1'
 
@@ -27,6 +28,7 @@ def init_app(app, models):
     # pylint: disable=unused-variable
 
     register(models)
+
 
 @app.errorhandler(BadRequestException)
 @app.errorhandler(ForbiddenException)
