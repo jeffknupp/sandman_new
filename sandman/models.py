@@ -1,15 +1,20 @@
 """SQLAlchemy-based models for use in sandman."""
 import datetime
 
-from flask import jsonify, request, make_response, g
+from flask import jsonify, request, make_response, g, render_template
 from flask.views import MethodView
-from flask.ext.sqlalchemy import SQLAlchemy  # pylint:disable=no-name-in-module,import-error,
+from flask.ext.sqlalchemy import SQLAlchemy  # pylint:disable=no-name-in-module,import-error
 
 from sandman.exception import (
     NotFoundException,
     BadRequestException,
     )
 from sandman.utils import verify_fields
+from sandman.content_negotiation import (
+    _get_acceptable_response_type,
+    HTML,
+    JSON
+    )
 
 db = SQLAlchemy()  # pylint: disable=invalid-name
 
@@ -26,6 +31,7 @@ class Model(MethodView):
     """Base class for all resources."""
 
     __model__ = None
+    __app__ = None
 
     def get(self, resource_id=None):
         """Return response to HTTP GET request."""
@@ -35,7 +41,7 @@ class Model(MethodView):
             resource = self._resource(resource_id)
             if not resource:
                 raise NotFoundException
-            return jsonify(self.to_dict(resource))
+            return self._single_resource(self.to_dict(resource))
 
     def _all_resources(self):
         """Return all resources of this type as a JSON list."""
@@ -122,11 +128,7 @@ class Model(MethodView):
             resource = self._resource(resource_id)
             return self._no_content_response()
         else:
-            resource = self.__model__(  # pylint: disable=not-callable
-                **request.json)
-            _get_session().add(resource)
-            _get_session().commit()
-            return self._created_response(self.to_dict(resource))
+            raise NotFoundException
 
     def _resource(self, resource_id):
         """Return resource represented by this *resource_id*."""
@@ -145,12 +147,15 @@ class Model(MethodView):
     @staticmethod
     def _created_response(resource):
         """Return an HTTP 201 "Created" response."""
-        response = jsonify(resource)
-        response.status_code = 201
-        return response
+        content_type = _get_acceptable_response_type()
+        if content_type == JSON:
+            response = jsonify(resource)
+            response.status_code = 201
+        else:
+            assert content_type == HTML
+            return render_template('resource.html', resource=resource)
 
-    @staticmethod
-    def to_dict(item):
+    def to_dict(self, item):
         """Return dict representation of class by iterating over database
         columns."""
         value = {}
@@ -160,3 +165,21 @@ class Model(MethodView):
                 attribute = str(attribute)
             value[column.name] = attribute
         return value
+
+    def primarky_key(self):
+        """Return the name of the primary key column of the underlying
+        model."""
+        return self.__model__.__table__.primary_key.columns.values()[0].name
+
+    def _single_resource(self, resource):
+        content_type = _get_acceptable_response_type()
+        if content_type == JSON:
+            response = jsonify(resource)
+            response.status_code = 200
+        else:
+            assert content_type == HTML
+            return render_template(
+                'resource.html',
+                resource=resource,
+                tablename=self.__model__.__name__,
+                primary_key=self.primarky_key())

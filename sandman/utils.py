@@ -3,7 +3,11 @@ from functools import wraps
 
 from flask import request
 
-from sandman.exception import BadRequestException, ForbiddenException
+from sandman.exception import (
+    InvalidAPIUsage,
+    BadRequestException,
+    ForbiddenException,
+    )
 
 
 def verify_fields(function):

@@ -12,12 +12,20 @@ from sandman.exception import (
     ConflictException,
     ServerErrorException,
     NotImplementedException,
-    ServiceUnavailableException)
+    ServiceUnavailableException,
+    InvalidAPIUsage
+    )
 from sandman.models import db, Model
+from sandman.content_negotiation import (
+        _get_acceptable_response_type,
+        JSON,
+        HTML,
+        )
 from sandman.admin import admin
 
 app = Flask(__name__)
 app.register_blueprint(admin, url_prefix='/admin')
+app.endpoint_classes = {}
 
 __version__ = '0.0.1'
 
@@ -45,6 +53,24 @@ def handle_application_error(error):
     response.status_code = error.code
     return response
 
+@app.errorhandler(InvalidAPIUsage)
+def handle_exception(error):
+    """Return a response with the appropriate status code, message, and content
+    type when an ``InvalidAPIUsage`` exception is raised."""
+    try:
+        if _get_acceptable_response_type() == JSON:
+            response = jsonify(error.to_dict())
+            response.status_code = error.code
+            return response
+        else:
+            return error.abort()
+    except InvalidAPIUsage as _:
+        # In addition to the original exception, we don't support the content
+        # type in the request's 'Accept' header, which is a more important
+        # error, so return that instead of what was originally raised.
+        response = jsonify(error.to_dict())
+        response.status_code = 415
+        return response
 
 def add_pk(db, cls):
     """Return a class deriving from our Model class as well as the SQLAlchemy
@@ -81,6 +107,7 @@ def register(cls_list):
         Base = automap_base()
         Base.prepare(db.engine, reflect=True)
         for cls in cls_list:
+            app.endpoint_classes[cls.__tablename__] = cls
             try:
                 sqlalchemy_class = getattr(Base.classes, cls.__tablename__)
             except AttributeError:
@@ -88,6 +115,7 @@ def register(cls_list):
                 # key
                 sqlalchemy_class = add_pk(db, cls)
             cls.__model__ = sqlalchemy_class
+            cls.__app__ = app
             view_func = cls.as_view(
                 cls.__tablename__)
             app.add_url_rule(

@@ -1,10 +1,10 @@
 {% extends "base.html" %}
 {% block content %}
 
-<h3>{{ tablename }}</h3>
-<h4>{{ resource.pk }}</h4>
+<h1>{{ tablename }}</h1>
+<h2>{{ primary_key }}: {{ resource[primary_key] }}</h2>
     <ul>
-        {% for attribute, value in resource.attributes.items() %}
+        {% for attribute, value in resource.items() %}
             {% if attribute == 'links' %}
             <li>Links<ul>
                 {% for link in value %}
