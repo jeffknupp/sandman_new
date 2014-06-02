@@ -88,7 +88,6 @@ def register(cls_list):
                 # key
                 sqlalchemy_class = add_pk(db, cls)
             cls.__model__ = sqlalchemy_class
-            cls.__db__ = db
             view_func = cls.as_view(
                 cls.__tablename__)
             app.add_url_rule(

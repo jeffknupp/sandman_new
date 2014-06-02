@@ -1,6 +1,6 @@
 """Admin module for sandman."""
 from __future__ import absolute_import
-from flask import Blueprint, render_template, send_file
+from flask import Blueprint, render_template
 
 admin = Blueprint('admin', __name__)
 
@@ -9,8 +9,3 @@ admin = Blueprint('admin', __name__)
 def home():
     """Show the base admin view."""
     return render_template('admin/home.html')
-
-@admin.route('/<resource>')
-def resource_page(resource):
-    """Show the base admin view."""
-    return send_file('templates/admin/' + resource)

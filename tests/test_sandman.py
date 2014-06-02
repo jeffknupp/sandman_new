@@ -189,6 +189,16 @@ def test_patch(app):
             '/artist/1',
             data=json.dumps({'Name': 'Jeff/DC'}),
             headers={'Content-type': 'application/json'})
-        assert response.status_code == 201
-        response = test.get('/artist/276')
-        assert json.loads(response.get_data())['ArtistId'] == 1
+        assert response.status_code == 204
+        response = test.get('/artist/1')
+        assert json.loads(response.get_data())['Name'] == 'Jeff/DC'
+
+
+def test_get_sorted_collection(app):
+    """Can we get a sorted collection as JSON?"""
+    with app.test_client() as test:
+        response = test.get('/artist?sort=Name')
+        json_response = json.loads(response.get_data())
+        assert len(json_response['resources']) == 275
+        assert json_response['resources'][0]['Name'] == 'A Cor Do Som'
+        assert json_response['resources'][274]['Name'] == 'Zeca Pagodinho'
