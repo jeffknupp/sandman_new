@@ -32,6 +32,7 @@ class Model(MethodView):
 
     __model__ = None
     __app__ = None
+    __endpoint__ = None
 
     def get(self, resource_id=None):
         """Return response to HTTP GET request."""
@@ -164,7 +165,25 @@ class Model(MethodView):
             if isinstance(attribute, datetime.datetime):
                 attribute = str(attribute)
             value[column.name] = attribute
+            value['links'] = self.links()
         return value
+
+    def links(self):
+        """Return a list of links for endpoints related to the resource."""
+        links = []
+        for foreign_key in self.__model__.__table__.foreign_keys:
+            column = foreign_key.column.name
+            column_value = getattr(self.__model__, column, None)
+            if column_value:
+                table = foreign_key.column.table.name
+                links.append({'rel': 'related', 'uri': '/{}/{}'.format(
+                    table, column_value)})
+        links.append({'rel': 'self', 'uri': self.resource_uri()})
+        return links
+
+    def resource_uri(self):
+        primary_key_value = getattr(self.__model__, self.primarky_key())
+        return '/{}/{}'.format(self.__endpoint__, primary_key_value)
 
     def primarky_key(self):
         """Return the name of the primary key column of the underlying

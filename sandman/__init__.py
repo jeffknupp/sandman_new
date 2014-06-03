@@ -116,14 +116,15 @@ def register(cls_list):
                 sqlalchemy_class = add_pk(db, cls)
             cls.__model__ = sqlalchemy_class
             cls.__app__ = app
+            cls.__endpoint__ = cls.__tablename__.lower() + 's'
             view_func = cls.as_view(
                 cls.__tablename__)
             app.add_url_rule(
-                '/' + cls.__tablename__.lower(),
+                '/' + cls.__endpoint__,
                 view_func=view_func)
             app.add_url_rule(
                 '/{resource}/<resource_id>'.format(
-                    resource=cls.__tablename__.lower()),
+                    resource=cls.__endpoint__),
                 view_func=view_func, methods=[
                     'GET',
                     'PUT',
