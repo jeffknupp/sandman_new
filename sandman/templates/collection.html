@@ -6,14 +6,14 @@
 <h2>{{ resources[0].__tablename__ }}</h2>
 <table class="table table-condensed table-striped">
     <thead>
-        {% for name in resources[0].as_dict() %}
+        {% for name in resources['resources'][0] %}
         <th>{{ name }}</th>
         {% endfor %}
     </thead>
     <tbody>
     {% for resource in resources %}
         <tr>
-            {% for attribute, value in resource.as_dict().items() %}
+            {% for attribute, value in resource %}
                 {% if attribute == 'links' %}
                 <td><ul>
                     {% for link in value %}

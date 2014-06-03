@@ -9,7 +9,7 @@
             <li>Links<ul>
                 {% for link in value %}
                     {% if link.rel != 'self' %}
-                    <li>link_{{link.rel}}: <a href="{{ link.uri }}">{{ link.uri }}</a></li>
+                    <li>{{link.rel}}: <a href="{{ link.uri }}">{{ link.uri }}</a></li>
                     {% else %}
                     <li>{{link.rel}}: <a href="{{ link.uri }}">{{ link.uri }}</a></li>
                     {% endif %}

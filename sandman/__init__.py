@@ -1,6 +1,6 @@
 from __future__ import absolute_import
 
-from flask import Flask, jsonify
+from flask import Flask, jsonify, g
 from sqlalchemy.ext.automap import automap_base
 from sqlalchemy import Table
 
@@ -25,7 +25,8 @@ from sandman.admin import admin
 
 app = Flask(__name__)
 app.register_blueprint(admin, url_prefix='/admin')
-app.endpoint_classes = {}
+with app.app_context():
+    g.class_registery = {}
 
 __version__ = '0.0.1'
 
@@ -107,7 +108,6 @@ def register(cls_list):
         Base = automap_base()
         Base.prepare(db.engine, reflect=True)
         for cls in cls_list:
-            app.endpoint_classes[cls.__tablename__] = cls
             try:
                 sqlalchemy_class = getattr(Base.classes, cls.__tablename__)
             except AttributeError:
@@ -116,15 +116,14 @@ def register(cls_list):
                 sqlalchemy_class = add_pk(db, cls)
             cls.__model__ = sqlalchemy_class
             cls.__app__ = app
-            cls.__endpoint__ = cls.__tablename__.lower() + 's'
             view_func = cls.as_view(
                 cls.__tablename__)
             app.add_url_rule(
-                '/' + cls.__endpoint__,
+                '/' + cls.endpoint(),
                 view_func=view_func)
             app.add_url_rule(
                 '/{resource}/<resource_id>'.format(
-                    resource=cls.__endpoint__),
+                    resource=cls.endpoint()),
                 view_func=view_func, methods=[
                     'GET',
                     'PUT',

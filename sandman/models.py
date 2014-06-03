@@ -1,5 +1,6 @@
 """SQLAlchemy-based models for use in sandman."""
 import datetime
+import decimal
 
 from flask import jsonify, request, make_response, g, render_template
 from flask.views import MethodView
@@ -10,6 +11,7 @@ from sandman.exception import (
     BadRequestException,
     )
 from sandman.utils import verify_fields
+from sandman.response import collection_as_dict, resource_as_dict
 from sandman.content_negotiation import (
     _get_acceptable_response_type,
     HTML,
@@ -75,8 +77,19 @@ class Model(MethodView):
                 20 * int(request.args['page']))
         resources = resources.all()
 
-        return jsonify(
-            {'resources': [self.to_dict(resource) for resource in resources]})
+        content_type = _get_acceptable_response_type()
+        if content_type == JSON:
+            response = jsonify(collection_as_dict(resources, self))
+            response.status_code = 200
+            return response
+        else:
+            resources = collection_as_dict(resources, self)
+            assert content_type == HTML
+            return render_template(
+                'collection.html',
+                resources=resources)
+
+
 
     @verify_fields
     def post(self):
@@ -134,9 +147,7 @@ class Model(MethodView):
     def _resource(self, resource_id):
         """Return resource represented by this *resource_id*."""
         resource = _get_session().query(self.__model__).get(resource_id)
-        if not resource:
-            return None
-        return resource
+        return jsonify(resource_as_dict(resource, resource_id, self))
 
     @staticmethod
     def _no_content_response():
@@ -164,26 +175,16 @@ class Model(MethodView):
             attribute = getattr(item, column.name)
             if isinstance(attribute, datetime.datetime):
                 attribute = str(attribute)
+            if isinstance(attribute, decimal.Decimal):
+                attribute = str(attribute)
             value[column.name] = attribute
-            value['links'] = self.links()
+            value['links'] = links(item, self.__endpoint__)
         return value
 
-    def links(self):
-        """Return a list of links for endpoints related to the resource."""
-        links = []
-        for foreign_key in self.__model__.__table__.foreign_keys:
-            column = foreign_key.column.name
-            column_value = getattr(self.__model__, column, None)
-            if column_value:
-                table = foreign_key.column.table.name
-                links.append({'rel': 'related', 'uri': '/{}/{}'.format(
-                    table, column_value)})
-        links.append({'rel': 'self', 'uri': self.resource_uri()})
-        return links
-
     def resource_uri(self):
-        primary_key_value = getattr(self.__model__, self.primarky_key())
-        return '/{}/{}'.format(self.__endpoint__, primary_key_value)
+        primary_key_value = (self.__model__, self.primarky_key())
+        return '/{}/{}'.format(self.__endpoint__,
+                primary_key_value.property.value)
 
     def primarky_key(self):
         """Return the name of the primary key column of the underlying
@@ -202,3 +203,24 @@ class Model(MethodView):
                 resource=resource,
                 tablename=self.__model__.__name__,
                 primary_key=self.primarky_key())
+
+    @classmethod
+    def endpoint(cls):
+        if hasattr(cls, '__endpoint__') and cls.__endpoint__ is not None:
+            return cls.__endpoint__
+        else:
+            cls.__endpoint__ = cls.__tablename__.lower() + 's'
+            return cls.__endpoint__
+
+def links(item, endpoint):
+    """Return a list of links for endpoints related to the resource."""
+    links = []
+    for foreign_key in item.__table__.foreign_keys:
+        column = foreign_key.column.name
+        column_value = getattr(item, column, None)
+        if column_value:
+            table = foreign_key.column.table.name
+            links.append({'rel': 'related', 'uri': '/{}/{}'.format(
+                table.lower() + 's', column_value)})
+    links.append({'rel': 'self', 'uri': '/{}/{}'.format(endpoint, item.resource_id)})
+    return links
